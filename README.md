@@ -43,19 +43,27 @@ python3 -m pip install -U -r requirements.txt
 # Option B: using pipenv
 pipenv install Pipfile
 pipenv shell
+```
+---
 
-Network Architecture
+## Network Architecture
 We propose an end-to-end deep learning framework designed for joint 3D topographic reconstruction and precise height estimation of micro-bumps. Our architecture utilizes a 3D Convolutional Neural Network (CNN) integrated with Coordinate Convolution (CoordConv) to compensate for position-dependent optical artifacts, a Soft-argmax block to probabilistically compress 3D feature maps into a continuous 2D height representation at sub-pixel precision, and a 2D CNN refiner to rectify spatial discontinuities and map values into absolute physical units.
 
 ![Overall Architecture](assets/overall_architecture_v1.png)
 
-Quantitative Results
+---
+
+## Quantitative Results
 (Quantitative evaluation results and tables will be updated soon.)
 
-Credits
+---
+
+## Credits
 We established the Maximum a Posteriori (MAP) estimation-based metrology pipeline as our primary statistical baseline for comparative analysis.
 
 This repository contains our independent implementation of the joint 3D CNN, CoordConv layers, and Soft-argmax projection blocks tailored for wafer-level micro-bump metrology.
 
-License
+---
+
+## License
 This project is licensed under the MIT License - see the LICENSE file for details.
