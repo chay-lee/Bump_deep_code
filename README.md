@@ -54,7 +54,7 @@ We provide a unified shell script (`run.sh`) that automatically loads the exact 
 bash run.sh [COMMAND] [VARIANT]
 ```
 
-[COMMAND] Options:
+**[COMMAND] Options:**
 
 train: Train the selected model from scratch.
 
@@ -62,7 +62,8 @@ test: Evaluate a pre-trained model (calculates MAE, Bias, and repeatability metr
 
 all: Execute full training followed immediately by evaluation.
 
-[VARIANT] Options:
+
+**[VARIANT] Options:**
 
 proposed: The final proposed framework (Recon + Consis + TV).
 
@@ -72,8 +73,8 @@ recon_consis: Reconstruction with consistency loss applied.
 
 wo_coordconv: An ablation model (the proposed framework without CoordConv).
 
-Examples:
 
+**Examples:**
 ```bash
 # 1. Train the final proposed model
 bash run.sh train proposed
