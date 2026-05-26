@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from args import config
+from utils.args import config
 
 torch.autograd.set_detect_anomaly(True)
 

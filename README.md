@@ -53,8 +53,33 @@ We propose an end-to-end deep learning framework designed for joint 3D topograph
 
 ---
 
-## Quantitative Results
-(Quantitative evaluation results and tables will be updated soon.)
+## Results
+
+<details>
+<summary><b>Quantitative Results</b></summary>
+
+| Model Variant | MAE ↓ | $\sigma_{pixel}$ ↓ | Bias (Bump Error) ↓ | $\sigma_{bump}$ ↓ |
+| :--- | :---: | :---: | :---: | :---: |
+| **MAP** | 1.6467 | 0.0772 | 0.0664 | 0.0575 |
+| **Recon Only** | **0.1789 ± 0.0014** | 0.0804 ± 0.0030 | 0.0650 ± 0.0158 | 0.0462 ± 0.0019 |
+| **Recon + Consis** | 0.2094 ± 0.0019 | 0.0773 ± 0.0031 | 0.0775 ± 0.0266 | 0.0485 ± 0.0041 |
+| **Proposed (Recon + Consis + TV)** | 0.2029 ± 0.0054 | **0.0669 ± 0.0007** | **0.0647 ± 0.0175** | **0.0428 ± 0.0005** |
+
+- *All deep learning metrics represent the Mean ± Std computed across three distinct random seeds.*
+- *The Proposed framework achieves the optimal balance between topographic fidelity and metrological repeatability.*
+
+</details>
+
+<details>
+<summary><b>Best models Download</b></summary>
+
+```bash
+wget -O best_models.zip "URL_PLACEHOLDER"
+unzip best_models.zip
+rm best_models.zip
+```
+
+</details>
 
 ---
 
