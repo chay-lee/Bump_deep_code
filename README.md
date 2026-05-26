@@ -44,6 +44,48 @@ pipenv shell
 ```
 </details>
 
+<details>
+<summary><b>Train and Evaluate</b></summary>
+
+We provide a unified shell script (`run.sh`) that automatically loads the exact hyperparameter configurations reported in the paper (Table II). You can seamlessly train and evaluate the models with a single command.
+
+**Usage:**
+```bash
+bash run.sh [COMMAND] [VARIANT]
+```
+
+[COMMAND] Options:
+
+train: Train the selected model from scratch.
+
+test: Evaluate a pre-trained model (calculates MAE, Bias, and repeatability metrics).
+
+all: Execute full training followed immediately by evaluation.
+
+[VARIANT] Options:
+
+proposed: The final proposed framework (Recon + Consis + TV).
+
+recon_only: The baseline model performing pure 3D reconstruction.
+
+recon_consis: Reconstruction with consistency loss applied.
+
+wo_coordconv: An ablation model (the proposed framework without CoordConv).
+
+Examples:
+
+```bash
+# 1. Train the final proposed model
+bash run.sh train proposed
+
+# 2. Evaluate the pre-trained proposed model (requires weights in the /weights directory)
+bash run.sh test proposed
+
+# 3. Train and evaluate the baseline model sequentially
+bash run.sh all recon_only
+```
+</details>
+
 ---
 
 ## Network Architecture
@@ -58,7 +100,7 @@ We propose an end-to-end deep learning framework designed for joint 3D topograph
 <details>
 <summary><b>Quantitative Results</b></summary>
 
-| Model Variant | MAE ↓ | $\sigma_{pixel}$ ↓ | Bias (Bump Error) ↓ | $\sigma_{bump}$ ↓ |
+| Model Variant | MAE | $\sigma_{pixel}$ | Bias (Bump Error) | $\sigma_{bump}$ |
 | :--- | :---: | :---: | :---: | :---: |
 | **MAP** | 1.6467 | 0.0772 | 0.0664 | 0.0575 |
 | **Recon Only** | **0.1789 ± 0.0014** | 0.0804 ± 0.0030 | 0.0650 ± 0.0158 | 0.0462 ± 0.0019 |
