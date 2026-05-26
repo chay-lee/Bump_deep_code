@@ -1,4 +1,4 @@
-# Core Deep Learning Framework
+# Deep Learning Framework
 torch==2.7.1
 torchvision==0.22.1
 torchaudio==2.7.1
@@ -9,11 +9,11 @@ pandas==2.3.3
 scipy==1.15.1
 sympy==1.14.0
 
-# Computer Vision & Image Processing
+# Image Processing
 opencv-python==4.13.0.92
 pillow==12.1.1
 
-# Visualization & Progress Bar
+# Visualization
 matplotlib==3.10.8
 seaborn==0.13.2
 tqdm==4.67.3
