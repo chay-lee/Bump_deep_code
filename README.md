@@ -13,16 +13,14 @@ To address these limitations, we propose a deep learning framework for high-spee
 
 ## Getting Started
 
-### 1. Dataset Download
 <details>
-<summary><b>Click to expand Dataset Details</b></summary>
+<summary><b>Dataset Download</b></summary>
 
 *(The dataset download link and instructions will be updated upon paper publication.)*
 </details>
 
-### 2. Environment Settings
 <details>
-<summary><b>Click to expand Environment Setup Instructions</b></summary>
+<summary><b>Environment Settings</b></summary>
 
 - **OS**: Ubuntu 20.04.1 LTS
 - **Language**: Python 3.8.10
@@ -45,6 +43,7 @@ pipenv install Pipfile
 pipenv shell
 ```
 </details>
+
 ---
 
 ## Network Architecture
