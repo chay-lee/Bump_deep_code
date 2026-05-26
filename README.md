@@ -44,6 +44,7 @@ python3 -m pip install -U -r requirements.txt
 pipenv install Pipfile
 pipenv shell
 ```
+</details>
 ---
 
 ## Network Architecture
