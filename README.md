@@ -134,4 +134,4 @@ This repository contains our independent implementation of the joint 3D CNN, Coo
 ---
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the [MIT License](LICENSE)
