@@ -48,7 +48,7 @@ pipenv shell
 <details>
 <summary><b>Train and Evaluate</b></summary>
 
-We provide a unified shell script (`run.sh`) that automatically loads the exact hyperparameter configurations reported in the paper (Table II). You can seamlessly train and evaluate the models with a single command.
+To facilitate reproduction, we provide a unified shell script (`run.sh`) pre-configured with the hyperparameters detailed in the paper. You can execute the training and evaluation pipelines using the following commands.
 
 **Usage:**
 
@@ -60,9 +60,9 @@ bash run.sh [COMMAND] [VARIANT]
 
 train: Train the selected model from scratch.
 
-test: Evaluate a pre-trained model (calculates MAE, Bias, and repeatability metrics).
+test: Evaluate the trained model (requires a saved checkpoint from the train step).
 
-all: Execute full training followed immediately by evaluation.
+all: Execute training followed immediately by evaluation.
 
 **[VARIANT] Options:**
 
@@ -80,10 +80,10 @@ wo_coordconv: An ablation model (the proposed framework without CoordConv).
 # 1. Train the final proposed model
 bash run.sh train proposed
 
-# 2. Evaluate the pre-trained proposed model (requires weights in the /weights directory)
+# 2. Evaluate the proposed model (ensure you have trained the model first)
 bash run.sh test proposed
 
-# 3. Train and evaluate the baseline model sequentially
+# 3. Train and evaluate the baseline model sequentially in one go
 bash run.sh all recon_only
 ```
 
@@ -98,29 +98,36 @@ The proposed deep learning-based bump height estimator processes the 3D probabil
 ![Overall Architecture](assets/overall_architecture_v4.png)
 
 ---
-
 ## Results
 
-## Results
+Our framework is evaluated on both **pixel-wise reconstruction accuracy** ($E_p$) and **scan-to-scan metrological repeatability** ($\sigma_p, \sigma_b$).
 
-<details>
-<summary><b>Main Results</b></summary>
+### 1. Quantitative Results
 
-> **Note:** All metrics are expressed in $10^{-2}~\mu\text{m}$. Bold text indicates optimal performance, and values are presented as mean ± standard deviation across three distinct random seeds.
+> **Note:** All metrics are expressed in $10^{-2}~\mu\text{m}$. Bold text indicates optimal performance. Values are presented as mean ± standard deviation across three distinct random seeds.
 
-| Method | $E_p$ | $\sigma_p$ | $E_b$ | $\sigma_b$ |
+| Method | $E_p$ (Pixel MAE) | $\sigma_p$ (Pixel STD) | $E_b$ (Bump Bias) | $\sigma_b$ (Bump STD) |
 | :--- | :---: | :---: | :---: | :---: |
 | **MAP** | 164.67 | 7.72 | 6.64 | 5.75 |
 | **Recon Only** | **17.89** ± 0.28 | 8.04 ± 0.22 | 6.50 ± 0.95 | 4.79 ± 0.21 |
 | **Recon + Consis** | 20.94 ± 0.57 | 7.73 ± 0.27 | 7.75 ± 0.31 | 4.35 ± 0.08 |
-| **Proposed (Recon + Consis + TV)** | 20.29 ± 0.54 | **6.69** ± 0.07 | **5.25** ± 0.76 | **4.28** ± 0.05 |
-| **w/o CoordConv (Ablation)** | 37.02 ± 0.12 | 9.95 ± 0.37 | 25.46 ± 1.07 | 5.14 ± 0.05 |
+| **Proposed** | 20.29 ± 0.54 | **6.69** ± 0.07 | **5.25** ± 0.76 | **4.28** ± 0.05 |
+| **w/o CoordConv** | 37.02 ± 0.12 | 9.95 ± 0.37 | 25.46 ± 1.07 | 5.14 ± 0.05 |
 
-- *$E_p$: Pixel-wise Mean Absolute Error (MAE) / $\sigma_p$: Pixel-wise Standard Deviation*
-- *$E_b$: Bump-level Bias (Error) / $\sigma_b$: Bump-level Standard Deviation*
-- *The Proposed framework achieves the optimal balance between topographic fidelity and metrological repeatability.*
+### 2. Qualitative Results
 
-</details>
+<div align="center">
+  <table style="border:none;">
+    <tr>
+      <td align="center"><img src="assets/recon/Full_3d_GT.png" alt="GT" width="100%" /><br><b>(a) GT</b></td>
+      <td align="center"><img src="assets/recon/Full_3d_MAP.png" alt="MAP" width="100%" /><br><b>(b) MAP</b></td>
+      <td align="center"><img src="assets/recon/Full_3d_Pred.png" alt="Proposed" width="100%" /><br><b>(c) Proposed</b></td>
+    </tr>
+  </table>
+  <p>
+    <em>Qualitative comparison of the global 3D surface reconstructions. The panels illustrate (a) the ground truth (GT), (b) the MAP baseline, and (c) the Proposed model. The horizontal axes (X, Y) and vertical axis (H) represent spatial position and height in micrometers (μm).</em>
+  </p>
+</div>
 
 ---
 
