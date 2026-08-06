@@ -47,7 +47,7 @@ class HeightEstimationNetwork(nn.Module):
             nn.Conv3d(64, 16, 3, padding=1),
             nn.BatchNorm3d(16),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Upsample(scale_factor=(1, 2, 2), mode='nearest'),
         )
 
         self.conv3d = nn.Conv3d(16, 1, 1)
