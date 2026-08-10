@@ -12,7 +12,6 @@ The precise inspection of micro-bump height is critical for ensuring the reliabi
 
 ## Getting Started
 
-````md
 <details>
 <summary><b>Dataset Download</b></summary>
 
@@ -20,15 +19,11 @@ The **Coin Bump Dataset** used in this study is available on Zenodo.
 
 **DOI:** https://doi.org/10.5281/zenodo.21834980
 
-The dataset includes optical triangulation measurements and corresponding CSI ground-truth height maps of semiconductor coin bumps.
-
+The dataset includes optical triangulation measurements and corresponding CSI ground-truth height maps of semiconductor coin bumps. 
 ```bash
 unzip Coin_bump_dataset.zip
-````
 
 </details>
-```
-
 
 <details>
 <summary><b>Environment Settings</b></summary>
