@@ -12,22 +12,23 @@ The precise inspection of micro-bump height is critical for ensuring the reliabi
 
 ## Getting Started
 
+````md
 <details>
 <summary><b>Dataset Download</b></summary>
 
-The Coin Bump Dataset used in this study is available on Zenodo:
+The **Coin Bump Dataset** used in this study is available on Zenodo.
 
-Zenodo DOI: 10.5281/zenodo.21834980
+**DOI:** https://doi.org/10.5281/zenodo.21834980
 
-The dataset contains optical triangulation measurements of semiconductor coin bumps and corresponding ground-truth height maps obtained using Coherence Scanning Interferometry (CSI). The coin bump test wafer used for data acquisition was provided by ATI.
+The dataset includes optical triangulation measurements and corresponding CSI ground-truth height maps of semiconductor coin bumps.
 
-Download Coin_bump_dataset.zip from Zenodo and extract it before running the training or evaluation scripts.
-
+```bash
 unzip Coin_bump_dataset.zip
-
-The dataset directory structure and paths required by the training scripts are described below.
+````
 
 </details>
+```
+
 
 <details>
 <summary><b>Environment Settings</b></summary>
@@ -142,6 +143,8 @@ Our framework is evaluated on both **pixel-wise reconstruction accuracy** ($E_p$
 ---
 
 ## Credits
+
+The coin bump test wafer used for data acquisition was provided by ATI.
 
 We established the Maximum a Posteriori (MAP) estimation-based metrology pipeline as our primary statistical baseline for comparative analysis.
 
