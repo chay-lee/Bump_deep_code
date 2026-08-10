@@ -22,7 +22,7 @@ The **Coin Bump Dataset** used in this study is available on Zenodo.
 The dataset includes optical triangulation measurements and corresponding CSI ground-truth height maps of semiconductor coin bumps. 
 ```bash
 unzip Coin_bump_dataset.zip
-
+```
 </details>
 
 <details>
