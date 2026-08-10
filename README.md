@@ -1,4 +1,4 @@
-# End-to-End Deep Learning Framework for 3D Morphological Reconstruction and Height Estimation of Micro-Bumps
+# 3D coordinate-aware deep learning for estimating heights of micro-bumps from projections
 
 by Chaeyoung Lee, Seungmi Oh, Yujin Jang, and Jeongtae Kim
 
