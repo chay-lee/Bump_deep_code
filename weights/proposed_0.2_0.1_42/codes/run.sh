@@ -25,9 +25,9 @@ EPOCHS=150
 BATCH_SIZE=6
 
 # Dataset
-DATASET_PATH="./data"
+DATASET_PATH="/home/dspl/CY/Bump/Dataset/ATI_coin_bump_5"
 
-# Evaluationㄴ
+# Evaluation
 BATCH_SIZE_TEST=32
 REPEAT_TEST="yes"
 

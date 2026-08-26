@@ -64,12 +64,13 @@ def calculate_and_save_bump_stats(base_dir, save_dir):
     ).reset_index()
 
     # E_b: mean absolute error of bump peak heights
-    mean_pred_peak = float(summary_df["Pred_peak_Mean"].mean())
-    mean_gt_peak = float(summary_df["GT_peak"].mean())
-    bump_peak_error = mean_gt_peak - mean_pred_peak
+    bump_peak_error = float(np.mean(np.abs(summary_df["Pred_peak_Mean"] - summary_df["GT_peak"])))
 
     # sigma_b: mean population STD across repeated scans
     bump_peak_repeatability = float(summary_df["Pred_peak_STD"].mean())
+
+    mean_pred_peak = float(summary_df["Pred_peak_Mean"].mean())
+    mean_gt_peak = float(summary_df["GT_peak"].mean())
 
     mean_pred_top = float(summary_df["Pred_top_Mean"].mean())
     mean_pred_top_std = float(summary_df["Pred_top_STD"].mean())
