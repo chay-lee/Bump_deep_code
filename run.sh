@@ -27,7 +27,7 @@ BATCH_SIZE=6
 # Dataset
 DATASET_PATH="./data"
 
-# Evaluationㄴ
+# Evaluation
 BATCH_SIZE_TEST=32
 REPEAT_TEST="yes"
 
