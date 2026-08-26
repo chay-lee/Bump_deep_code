@@ -1,59 +1,89 @@
 #!/bin/bash
 set -e
 
-DATASET_PATH="./data"
+# =============================================================================
+# Experiment configuration
+# =============================================================================
+
+# Experiment name
+EXPERIMENT_NAME="proposed"
+
+# Reproducibility
 SEED=42
 
-print_usage() {
-    echo "Usage: bash run.sh [COMMAND] [VARIANT]"
-    echo "Commands: train, test, all"
-    echo "Variants: recon_only, recon_consis, proposed, wo_coordconv"
-    exit 1
-}
+# Loss weights
+LAMBDA_C=0.2
+LAMBDA_T=0.1
 
-if [ "$#" -lt 2 ]; then print_usage; fi
+# Model configuration
+COORDCONV="yes"
+USE_2D_CNN="yes"
 
-COMMAND=$1
-VARIANT=$2
+# Training hyperparameters
+INITIAL_LR="5e-4"
+EPOCHS=150
+BATCH_SIZE=6
 
-# Map variants to hyperparameters (from Paper Table II)
-case $VARIANT in
-    recon_only)   LR="1e-3"; EPOCHS=130; BATCH=32; L1=0.0; L2=0.0; COORD="yes" ;;
-    recon_consis) LR="1e-3"; EPOCHS=130; BATCH=6;  L1=0.1; L2=0.0; COORD="yes" ;;
-    proposed)     LR="5e-4"; EPOCHS=150; BATCH=6;  L1=0.2; L2=0.1; COORD="yes" ;;
-    wo_coordconv) LR="5e-4"; EPOCHS=150; BATCH=6;  L1=0.2; L2=0.1; COORD="no"  ;;
-    *) echo "[Error] Unknown variant: $VARIANT"; print_usage ;;
-esac
+# Dataset
+DATASET_PATH="./data"
 
-run_python() {
-    local IS_TRAIN=$1
-    local FULL_MODEL_NAME="${VARIANT}_${L1}_${L2}_${SEED}"
-    
-    if [ "$IS_TRAIN" = "yes" ]; then
-        echo ">> [TRAIN] Model: $VARIANT | Seed: $SEED"
-        python3 main.py --is_train yes \
-            --model_feature "$FULL_MODEL_NAME" \
+# Evaluation
+BATCH_SIZE_TEST=32
+REPEAT_TEST="yes"
+
+# =============================================================================
+# Derived configuration
+# =============================================================================
+
+MODEL_FEATURE="${EXPERIMENT_NAME}_${LAMBDA_C}_${LAMBDA_T}_${SEED}"
+
+COMMAND=${1:-train}
+
+# =============================================================================
+# Run
+# =============================================================================
+
+case "$COMMAND" in
+
+    train)
+        python3 main.py \
+            --is_train yes \
+            --model_feature "$MODEL_FEATURE" \
             --dataset_path "$DATASET_PATH" \
-            --epochs "$EPOCHS" --batch_size "$BATCH" --initial_lr "$LR" \
-            --lambda_val_1 "$L1" --lambda_val_2 "$L2" \
-            --coordconv "$COORD" --seed "$SEED" \
-            --eval_epoch 5 --rand_5 yes
-    else
-        echo ">> [TEST] Model: $VARIANT | Seed: $SEED"
-        python3 main.py --is_train no \
-            --model_feature "$FULL_MODEL_NAME" \
-            --dataset_path "$DATASET_PATH" \
-            --model_mode "_final" \
-            --batch_size_test 32 \
-            --lambda_val_1 "$L1" --lambda_val_2 "$L2" \
-            --coordconv "$COORD" --seed "$SEED" \
-            --repeat_test yes
-    fi
-}
+            --epochs "$EPOCHS" \
+            --initial_lr "$INITIAL_LR" \
+            --batch_size "$BATCH_SIZE" \
+            --lambda_c "$LAMBDA_C" \
+            --lambda_t "$LAMBDA_T" \
+            --coordconv "$COORDCONV" \
+            --use_2d_cnn "$USE_2D_CNN" \
+            --seed "$SEED" \
+            --sample_5_scans yes
+        ;;
 
-case $COMMAND in
-    train) run_python "yes" ;;
-    test)  run_python "no"  ;;
-    all)   run_python "yes"; run_python "no" ;;
-    *)     echo "[Error] Unknown command: $COMMAND"; print_usage ;;
+    test)
+        python3 main.py \
+            --is_train no \
+            --model_feature "$MODEL_FEATURE" \
+            --dataset_path "$DATASET_PATH" \
+            --lambda_c "$LAMBDA_C" \
+            --lambda_t "$LAMBDA_T" \
+            --coordconv "$COORDCONV" \
+            --use_2d_cnn "$USE_2D_CNN" \
+            --seed "$SEED" \
+            --batch_size_test "$BATCH_SIZE_TEST" \
+            --repeat_test "$REPEAT_TEST" \
+            --model_mode "_final"
+        ;;
+
+    all)
+        bash "$0" train
+        bash "$0" test
+        ;;
+
+    *)
+        echo "Usage: bash run.sh [train|test|all]"
+        exit 1
+        ;;
+
 esac
