@@ -44,6 +44,7 @@ python3 -m venv venv
 source venv/bin/activate
 python3 -m pip install -U -r requirements.txt
 ```
+
 </details>
 
 <details>
@@ -90,6 +91,7 @@ The proposed system processes the 3D probability volume constructed from scan pr
 ![Overall Architecture](assets/overall_architecture_v4.png)
 
 ---
+
 ## Results
 
 The proposed system is evaluated in terms of pixel-wise reconstruction accuracy ($E_p$), bump peak height accuracy ($E_b$), and scan-to-scan repeatability ($\sigma_p$, $\sigma_b$).
@@ -98,14 +100,14 @@ The proposed system is evaluated in terms of pixel-wise reconstruction accuracy 
 
 > **Note:** All metrics are expressed in $10^{-2}~\mu\text{m}$. Bold text indicates optimal performance. Values are presented as mean ± standard deviation across three distinct random seeds.
 
-| Method | $E_p$ (Pixel MAE) | $\sigma_p$ (Pixel STD) | $E_b$ (Bump Bias) | $\sigma_b$ (Bump STD) |
-| :--- | :---: | :---: | :---: | :---: |
-| **MAP** | 164.67 | 7.72 | 6.64 | 5.75 |
-| **Proposed ($L_r$)** | **17.89 ± 0.28** | 8.04 ± 0.22 | 6.50 ± 0.95 | 4.79 ± 0.21 |
-| **Proposed ($L_r + L_c$)** | 20.94 ± 0.57 | 7.73 ± 0.27 | 7.75 ± 0.31 | 4.35 ± 0.08 |
-| **Proposed ($L_r + L_c + L_t$)** | 20.29 ± 0.44 | **6.69 ± 0.05** | **5.65 ± 0.76** | **4.28 ± 0.04** |
-| **Proposed (w/o CoordConv)** | 37.02 ± 0.12 | 9.95 ± 0.37 | 25.46 ± 1.07 | 5.14 ± 0.05 |
-| **Proposed (w/o 2D CNN)** | 23.46 ± 0.25 | 6.76 ± 0.17 | 12.47 ± 0.45 | 5.03 ± 0.15 |
+| Method                                   |   $E_p$ (Pixel MAE)   | $\sigma_p$ (Pixel STD) |  $E_b$ (Bump Bias)  | $\sigma_b$ (Bump STD) |
+| :--------------------------------------- | :---------------------: | :----------------------: | :--------------------: | :---------------------: |
+| **MAP**                            |         164.67         |           7.72           |          6.64          |          5.75          |
+| **Proposed ($L_r$)**             | **17.89 ± 0.28** |       8.04 ± 0.22       |      6.50 ± 0.95      |      4.79 ± 0.21      |
+| **Proposed ($L_r + L_c$)**       |      20.94 ± 0.57      |       7.73 ± 0.27       |      7.75 ± 0.31      |      4.35 ± 0.08      |
+| **Proposed ($L_r + L_c + L_t$)** |      20.29 ± 0.44      |  **6.69 ± 0.05**  | **5.65 ± 0.76** | **4.28 ± 0.04** |
+| **Proposed (w/o CoordConv)**       |      37.02 ± 0.12      |       9.95 ± 0.37       |     25.46 ± 1.07     |      5.14 ± 0.05      |
+| **Proposed (w/o 2D CNN)**          |      23.46 ± 0.25      |       6.76 ± 0.17       |     12.47 ± 0.45     |      5.03 ± 0.15      |
 
 ---
 
@@ -122,4 +124,3 @@ This repository contains our independent implementation of the joint 3D CNN, Coo
 ## License
 
 This project is licensed under the [MIT License](LICENSE)
-```
