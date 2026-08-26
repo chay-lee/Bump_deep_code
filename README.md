@@ -49,27 +49,36 @@ python3 -m pip install -U -r requirements.txt
 <details>
 <summary><b>Train and Evaluate</b></summary>
 
-The training and evaluation scripts are configured for the proposed model, corresponding to **Proposed ($L_r + L_c + L_t$)** in the paper.
+The training and evaluation scripts can be run through `run.sh`.
+
+Before running the code, set `DATASET_PATH` in `run.sh` to the root directory of the extracted Coin Bump Dataset.
 
 ```bash
-# Train the proposed model
-bash run.sh train proposed
-
-# Evaluate a trained model
-bash run.sh test proposed
-
-# Train and evaluate sequentially
-bash run.sh all proposed
-
-The repository also includes the model variants used in the experiments:
-
-recon_only: Proposed ($L_r$)
-recon_consis: Proposed ($L_r + L_c$)
-proposed: Proposed ($L_r + L_c + L_t$)
-wo_coordconv: Proposed (w/o CoordConv)
-wo_2dcnn: Proposed (w/o 2D CNN)
-
+DATASET_PATH="./data"
 ```
+
+The default configuration in `run.sh` corresponds to **Proposed ($L_r + L_c + L_t$)** reported in the paper.
+
+Train the model with:
+
+```bash
+bash run.sh train
+```
+
+Evaluate the trained model on the repeated test scans with:
+
+```bash
+bash run.sh test
+```
+
+Alternatively, run training followed by evaluation with:
+
+```bash
+bash run.sh all
+```
+
+The main experimental settings can be modified directly in `run.sh`, including the random seed, loss weights (`LAMBDA_C`, `LAMBDA_T`), learning rate, number of epochs, batch size, CoordConv, and the 2D CNN refiner.
+
 </details>
 
 ---
