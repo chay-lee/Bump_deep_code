@@ -68,7 +68,8 @@ proposed: Proposed ($L_r + L_c + L_t$)
 wo_coordconv: Proposed (w/o CoordConv)
 wo_2dcnn: Proposed (w/o 2D CNN)
 
-</details> ```
+```
+ </details>
 ---
 
 ## Network Architecture
