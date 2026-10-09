@@ -2,9 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-torch.autograd.set_detect_anomaly(True)
-
-
 class HeightEstimationNetwork(nn.Module):
     def __init__(self, args):
         super().__init__()
@@ -98,22 +95,37 @@ class HeightEstimationNetwork(nn.Module):
         self = super()._apply(fn)
 
 
+
 class AddCoords3d(nn.Module):
     def __init__(self):
         super().__init__()
+        self.register_buffer("_y_coords", torch.empty(0), persistent=False)
+        self.register_buffer("_x_coords", torch.empty(0), persistent=False)
 
     def forward(self, input_tensor):
         batch_size, _, depth, height, width = input_tensor.shape
 
-        z_coords = torch.linspace(-1.0, 1.0, depth).type_as(input_tensor)
-        y_coords = torch.linspace(-1.0, 1.0, height).type_as(input_tensor)
-        x_coords = torch.linspace(-1.0, 1.0, width).type_as(input_tensor)
+        if (
+            self._y_coords.shape != (1, 1, 1, height, 1)
+            or self._x_coords.shape != (1, 1, 1, 1, width)
+            or self._y_coords.device != input_tensor.device
+            or self._x_coords.device != input_tensor.device
+            or self._y_coords.dtype != input_tensor.dtype
+            or self._x_coords.dtype != input_tensor.dtype
+        ):
+            self._y_coords = torch.linspace(
+                -1.0, 1.0, height
+            ).type_as(input_tensor).view(1, 1, 1, height, 1)
 
-        _, y_mesh, x_mesh = torch.meshgrid(z_coords, y_coords, x_coords)
+            self._x_coords = torch.linspace(
+                -1.0, 1.0, width
+            ).type_as(input_tensor).view(1, 1, 1, 1, width)
 
-        y_mesh = y_mesh.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
-        x_mesh = x_mesh.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
+        y_mesh = self._y_coords.expand(
+            batch_size, 1, depth, height, width
+        )
+        x_mesh = self._x_coords.expand(
+            batch_size, 1, depth, height, width
+        )
 
-        output_tensor = torch.cat([input_tensor, y_mesh, x_mesh], dim=1)
-
-        return output_tensor
+        return torch.cat([input_tensor, y_mesh, x_mesh], dim=1)

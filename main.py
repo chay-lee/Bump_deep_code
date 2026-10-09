@@ -129,25 +129,9 @@ if __name__ == "__main__":
 
         os.makedirs(MODEL_DIR, exist_ok=True)
 
-        # Backup current code state
         backup_dir = os.path.join(MODEL_DIR, "codes")
-
-        if os.path.isdir(backup_dir):
-            shutil.rmtree(backup_dir)
-
-        shutil.copytree(
-            os.getcwd(),
-            backup_dir,
-            ignore=shutil.ignore_patterns(
-                ".git",
-                "data",
-                "weights",
-                "venv",
-                ".venv",
-                "__pycache__",
-                "*.pyc"
-            )
-        )
+        if os.path.exists(backup_dir): shutil.rmtree(backup_dir)
+        shutil.copytree(".", backup_dir, ignore=shutil.ignore_patterns(".git", "data", "Dataset", "coin_bump_dataset", "weights", "venv", ".venv", "__pycache__", "*.pyc"))
 
         loss_fn = get_loss_fn()
         optimizer = torch.optim.Adam(model.parameters(), lr=args.initial_lr, weight_decay=1e-5)
