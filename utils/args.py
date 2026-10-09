@@ -38,7 +38,7 @@ def parse_args():
     # Runtime / hardware configuration
     parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"], help="Device used for training and evaluation")
     parser.add_argument("--cuda_mode", type=str, default="single_gpu", choices=["single_gpu", "multi_gpu"], help="GPU execution mode")
-    parser.add_argument("--model_root", type=str, default="./weights", help="Directory for saving and loading checkpoints")
+    parser.add_argument("--model_root", type=str, default="../Model", help="Directory for saving and loading checkpoints")
 
     # Training control
     parser.add_argument("--eval_epoch", type=int, default=5, help="Validation interval in epochs")

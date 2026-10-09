@@ -11,17 +11,14 @@ def masked_l1_loss(pred, gt):
     mask = (gt != 0).float()
     loss = torch.abs(pred - gt)
     masked_loss = loss * mask
-    if mask.sum() > 0:
-        return masked_loss.sum() / mask.sum()
-    else:
-        return torch.tensor(0.0, device=pred.device)
+    return masked_loss.sum() / mask.sum().clamp_min(1)
 
 class ConsistencyLoss(nn.Module):
     def __init__(self, eps=1e-8):
         super().__init__()
         self.eps = eps
 
-    def forward(self, preds, masks=None):
+    def forward(self, preds):
         if preds.size(1) < 2:
             return torch.tensor(0.0, device=preds.device, requires_grad=True)
             
@@ -38,7 +35,9 @@ class TotalVariationLoss(nn.Module):
         super().__init__()
         self.eps = eps
 
-    def forward(self, preds): 
+    def forward(self, preds):
+        preds = preds.float()
+
         if preds.dim() == 3:
             preds = preds.unsqueeze(1)
 

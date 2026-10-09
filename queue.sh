@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+# 위에서 아래로 순서대로 학습. 필요 없는 줄은 앞에 # 추가.
+# 실험마다 SEED, INITIAL_LR, LAMBDA_C, LAMBDA_T, BATCH_SIZE 등을 자유롭게 변경.
+# CUDA_VISIBLE_DEVICES=0: 해당 실험에서 GPU 0 하나만 사용.
+# 실험 이름 뒤에는 run.sh가 시드, LR, Loss 가중치 등을 자동으로 붙여 줌.
+
+# CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=recon   SEED=42 INITIAL_LR=5e-4 LAMBDA_C=0.0 LAMBDA_T=0.0 BATCH_SIZE=32 bash run.sh train
+# CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=consis  SEED=42 INITIAL_LR=5e-4 LAMBDA_C=0.2 LAMBDA_T=0.0 BATCH_SIZE=6  bash run.sh train
+CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=full    SEED=42 INITIAL_LR=5e-4 LAMBDA_C=0.2 LAMBDA_T=0.1 BATCH_SIZE=6  bash run.sh train
+
+CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=full    SEED=0 INITIAL_LR=5e-4 LAMBDA_C=0.2 LAMBDA_T=0.1 BATCH_SIZE=6  bash run.sh train
+
+CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=full    SEED=26 INITIAL_LR=5e-4 LAMBDA_C=0.2 LAMBDA_T=0.1 BATCH_SIZE=6  bash run.sh train
+
+# CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=wocoord SEED=42 INITIAL_LR=5e-4 LAMBDA_C=0.2 LAMBDA_T=0.1 BATCH_SIZE=6 COORDCONV=no bash run.sh train
+# CUDA_VISIBLE_DEVICES=0 EXPERIMENT_NAME=wo2d    SEED=42 INITIAL_LR=5e-4 LAMBDA_C=0.2 LAMBDA_T=0.1 BATCH_SIZE=6 USE_2D_CNN=no bash run.sh train
+
+# 각 줄은 순차 실행됨. 같은 서버에서 서로 다른 GPU의 실험을 병렬로 실행하려면
+# 별도 터미널에서 각각 run.sh를 실행하는 방법이 가장 간단함.

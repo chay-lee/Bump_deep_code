@@ -1,3 +1,4 @@
+
 import datetime
 import os
 import numpy as np
@@ -27,15 +28,14 @@ def train(train_loader, val_loader, model, txt_file, loss_fn, optimizer, MODEL_D
         txt_file.write(f'\n\n\nTrain epoch {epoch}  ({current_time})')
         txt_file.flush()
 
-        sum_total, sum_recon, sum_consis, sum_tv = 0.0, 0.0, 0.0, 0.0
+        sum_losses = torch.zeros(4, device=args.device, dtype=torch.float64)
         n_samples = 0
 
         for i, data in enumerate(train_loader):
-            inputs, interferos, mask, heights, file_name = data
+            inputs, interferos, file_name = data
 
             inputs = inputs.to(args.device, non_blocking=True).float()
             interferos = interferos.to(args.device, non_blocking=True).float()
-            mask = mask.to(args.device, non_blocking=True)
 
             is_sequence = (inputs.dim() == 6)
 
@@ -44,14 +44,12 @@ def train(train_loader, val_loader, model, txt_file, loss_fn, optimizer, MODEL_D
                 H_out, W_out = interferos.shape[-2], interferos.shape[-1]
                 inputs_flat = inputs.view(B * S, C, D, H, W)
                 interferos_flat = interferos.view(B * S, 1, H_out, W_out)
-                mask_flat = mask.view(B * S, H_out, W_out)
             else:
                 B, C, D, H, W = inputs.shape
                 S = 1
                 H_out, W_out = interferos.shape[-2], interferos.shape[-1]
                 inputs_flat = inputs
                 interferos_flat = interferos
-                mask_flat = mask
 
             recon_loss = torch.tensor(0.0, device=args.device)
             consis_loss = torch.tensor(0.0, device=args.device)
@@ -69,29 +67,30 @@ def train(train_loader, val_loader, model, txt_file, loss_fn, optimizer, MODEL_D
 
                 if lambda_c > 0.0 and is_sequence:
                     preds_reshaped = preds_flat.view(B, S, 1, H_out, W_out)
-                    mask_reshaped = mask.view(B, S, H_out, W_out)
-                    consis_loss = loss_fn[1](preds_reshaped, mask_reshaped)
+                    consis_loss = loss_fn[1](preds_reshaped)
                     loss = loss + (lambda_c * consis_loss)
 
                 if lambda_t > 0.0:
                     tv_loss = loss_fn[2](preds_flat)
                     loss = loss + (lambda_t * tv_loss)
 
-                sum_total += float(loss) * B
-                sum_recon += float(recon_loss) * B
-                sum_consis += float(consis_loss) * B
-                sum_tv += float(tv_loss) * B
+                sum_losses += torch.stack([
+                    loss.detach(),
+                    recon_loss.detach(),
+                    consis_loss.detach(),
+                    tv_loss.detach()
+                ]).to(torch.float64) * B
+
                 n_samples += B
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
-        mean_train_loss = sum_total / n_samples
-        mean_train_recon_loss = sum_recon / n_samples
-        mean_train_consis_loss = sum_consis / n_samples
-        mean_train_tv_loss = sum_tv / n_samples
+        mean_train_loss, mean_train_recon_loss, mean_train_consis_loss, mean_train_tv_loss = (
+            (sum_losses / n_samples).tolist()
+        )
 
         mem_GB = int(torch.cuda.max_memory_allocated() / (1024**3))
         lr = optimizer.param_groups[0]['lr']
@@ -166,7 +165,7 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
     model.eval()
 
     if log_loss:
-        sum_total_val, sum_recon_val, sum_consis_val, sum_tv_val = 0.0, 0.0, 0.0, 0.0
+        sum_losses_val = torch.zeros(4, device=args.device, dtype=torch.float64)
         n_samples_val = 0
 
     speed_result = torch.zeros(6, device=args.device) if check_time else None
@@ -186,17 +185,16 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
 
         for i, data in enumerate(data_loader):
 
-            if len(data) == 5:
-                inputs, interferos, mask, heights_list, file_names = data
+            if 'test' in dataset_type:
+                inputs, interferos, heights_list, file_names = data
             else:
-                inputs, interferos, mask, file_names = data
+                inputs, interferos, file_names = data
 
             if check_time:
                 t1 = time_sync()
 
             inputs = inputs.to(args.device, non_blocking=True).float()
             interferos = interferos.to(args.device, non_blocking=True).float()
-            mask = mask.to(args.device, non_blocking=True)
 
             if check_time:
                 speed_result[1] += time_sync() - t1
@@ -208,13 +206,11 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
                 H_out, W_out = interferos.shape[-2], interferos.shape[-1]
                 inputs_flat = inputs.view(B * S, C, D, H, W)
                 interferos_flat = interferos.view(B * S, 1, H_out, W_out)
-                mask_flat = mask.view(B * S, H_out, W_out)
             else:
                 B = inputs.shape[0]
                 S = 1
                 inputs_flat = inputs
                 interferos_flat = interferos
-                mask_flat = mask
 
             if check_time:
                 t2 = time_sync()
@@ -241,8 +237,12 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
 
                     gt_map_b = interferos[b, 0].detach().cpu().numpy() if not is_sequence else interferos[b, 0, 0].detach().cpu().numpy()
                     pred_map_b = preds[b, 0].detach().cpu().numpy() if not is_sequence else preds[b, 0, 0].detach().cpu().numpy()
-                    mask_b = mask[b].detach().cpu().numpy() if not is_sequence else mask[b, 0].detach().cpu().numpy()
 
+                    # TODO: Replace with mask-independent bump height evaluation.
+                    # The following test-only code is not yet compatible.
+                    # mask_b = mask[b].detach().cpu().numpy() if not is_sequence else mask[b, 0].detach().cpu().numpy()
+                    mask_b=None
+                    
                     records, gt_h_list, pred_h_list = extract_bump_heights(
                         base_name, pred_map_b, mask_b, heights_list[b]
                     )
@@ -268,18 +268,20 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
                 tv_loss = torch.tensor(0.0, device=preds_flat.device)
 
                 if lambda_c > 0.0 and is_sequence:
-                    mask_reshaped = mask.view(B, S, mask.shape[-2], mask.shape[-1])
-                    consis_loss = loss_fn[1](preds, mask_reshaped)
+                    consis_loss = loss_fn[1](preds)
                     loss = loss + (lambda_c * consis_loss)
 
                 if lambda_t > 0.0:
                     tv_loss = loss_fn[2](preds_flat)
                     loss = loss + (lambda_t * tv_loss)
 
-                sum_total_val += float(loss) * B
-                sum_recon_val += float(recon_loss) * B
-                sum_consis_val += float(consis_loss) * B
-                sum_tv_val += float(tv_loss) * B
+                sum_losses_val += torch.stack([
+                    loss.detach(),
+                    recon_loss.detach(),
+                    consis_loss.detach(),
+                    tv_loss.detach()
+                ]).to(torch.float64) * B
+
                 n_samples_val += B
 
         mem_GB = int(torch.cuda.max_memory_allocated() / (1024**3))
@@ -298,10 +300,9 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
             )
 
         if log_loss and n_samples_val > 0:
-            mean_loss_val = sum_total_val / n_samples_val
-            mean_recon_loss_val = sum_recon_val / n_samples_val
-            mean_consis_loss_val = sum_consis_val / n_samples_val
-            mean_tv_loss_val = sum_tv_val / n_samples_val
+            mean_loss_val, mean_recon_loss_val, mean_consis_loss_val, mean_tv_loss_val = (
+                (sum_losses_val / n_samples_val).tolist()
+            )
 
             return_str += (
                 f'\nEpoch:{epoch:d} '
