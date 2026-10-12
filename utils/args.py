@@ -42,7 +42,7 @@ def parse_args():
 
     # Training control
     parser.add_argument("--eval_epoch", type=int, default=5, help="Validation interval in epochs")
-    parser.add_argument("--val_patience", type=int, default=10, help="Early stopping patience")
+    parser.add_argument("--val_patience", type=int, default=5, help="Early stopping patience")
     parser.add_argument("--resume", type=str2bool, default=False, help="Resume training from a checkpoint")
     parser.add_argument("--resume_path", type=str, default="", help="Path to the checkpoint used for resuming training")
 
