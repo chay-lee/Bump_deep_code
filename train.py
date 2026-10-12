@@ -321,31 +321,29 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
 
 
 # -----------------------------------------------------------------------------
+
 class Score_Observer:
     def __init__(self, name, verbose=True):
         self.name = name
-        self.min_epoch = 0
-        self.last = 0
-        self.min = 10
+        self.min_epoch = -1
+        self.min = float('inf')
         self.patience = 0
         self.verbose = verbose
 
     def update(self, score, epoch, txt_file):
+
         if score < self.min:
             self.min = score
             self.min_epoch = epoch
-
-        if epoch == 0 or score < self.last:
             self.patience = 0
+
         else:
             self.patience += 1
 
-            if self.verbose:
-                print(f'patience: {self.patience}')
+        if self.verbose:
+            print(f'patience: {self.patience}')
 
         txt_file.write(f'\n patience: {self.patience}')
         txt_file.flush()
-
-        self.last = score
 
         return self.patience, self.min_epoch
