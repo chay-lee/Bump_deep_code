@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument("--use_2d_cnn", type=str2bool, default=True, help="Enable the 2D CNN refiner")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument("--sample_5_scans", type=str2bool, default=True, help="Randomly select five repeated scans per spatial region")
+    parser.add_argument("--weight_decay", type=float, default=1e-5)
 
     # Evaluation configuration
     parser.add_argument("--repeat_test", type=str2bool, default=False, help="Evaluate scan-to-scan repeatability")
