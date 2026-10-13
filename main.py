@@ -134,7 +134,7 @@ if __name__ == "__main__":
         shutil.copytree(".", backup_dir, ignore=shutil.ignore_patterns(".git", "data", "Dataset", "coin_bump_dataset", "weights", "venv", ".venv", "__pycache__", "*.pyc"))
 
         loss_fn = get_loss_fn()
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.initial_lr, weight_decay=1e-5)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.initial_lr, weight_decay=args.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
             T_max=args.epochs,
@@ -239,9 +239,9 @@ if __name__ == "__main__":
             mae_save_dir=results_root
         )
 
-        calculate_and_save_bump_stats(
-            base_dir=results_root,
-            save_dir=results_root
-        )
+        # calculate_and_save_bump_stats(
+        #     base_dir=results_root,
+        #     save_dir=results_root
+        # )
 
         print(f"\nTest finished for: {args.model_feature}")
