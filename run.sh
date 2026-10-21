@@ -15,11 +15,13 @@ DATASET_PATH="${DATASET_PATH:-/home/dspl/CY/Bump/Dataset/coin_bump_dataset_2}"
 BATCH_SIZE_TEST="${BATCH_SIZE_TEST:-32}"
 REPEAT_TEST="${REPEAT_TEST:-yes}"
 CUDA_MODE="${CUDA_MODE:-single_gpu}"
+MODEL_MODE="${MODEL_MODE:-_final}"
+WEIGHT_DECAY="${WEIGHT_DECAY:-1e-5}"
+RESUME="${RESUME:-no}"
+RESUME_PATH="${RESUME_PATH:-}"
 
 # 서로 다른 실험이 같은 폴더를 쓰지 않도록 이름 생성
-# MODEL_FEATURE="${MODEL_FEATURE:-${EXPERIMENT_NAME}_s${SEED}}_lr${INITIAL_LR}_wd{WEIGHT_DECAY}_c${LAMBDA_C}_t${LAMBDA_T}"
-# MODEL_FEATURE="${MODEL_FEATURE:-${EXPERIMENT_NAME}_s${SEED}}_lr${INITIAL_LR}_c${LAMBDA_C}_t${LAMBDA_T}"
-MODEL_FEATURE="${MODEL_FEATURE:-${EXPERIMENT_NAME}_c${LAMBDA_C}_t${LAMBDA_T}_cc${COORDCONV}_2d${USE_2D_CNN}_lr${INITIAL_LR}_ep${EPOCHS}_bs${BATCH_SIZE}_s${SEED}}"
+MODEL_FEATURE="${MODEL_FEATURE:-${EXPERIMENT_NAME}_s${SEED}}_lr${INITIAL_LR}_wd${WEIGHT_DECAY}_c${LAMBDA_C}_t${LAMBDA_T}"
 COMMAND="${1:-train}"
 
 echo "Mode: $COMMAND | Experiment: $MODEL_FEATURE | GPU: ${CUDA_VISIBLE_DEVICES:-default} | $CUDA_MODE"
@@ -39,7 +41,10 @@ case "$COMMAND" in
             --use_2d_cnn "$USE_2D_CNN" \
             --seed "$SEED" \
             --sample_5_scans yes \
-            --cuda_mode "$CUDA_MODE"
+            --weight_decay "$WEIGHT_DECAY" \
+            --cuda_mode "$CUDA_MODE" \
+            --resume "$RESUME" \
+            --resume_path "$RESUME_PATH"
         ;;
     test)
         python3 main.py \
@@ -53,7 +58,7 @@ case "$COMMAND" in
             --seed "$SEED" \
             --batch_size_test "$BATCH_SIZE_TEST" \
             --repeat_test "$REPEAT_TEST" \
-            --model_mode "_final" \
+            --model_mode "$MODEL_MODE" \
             --cuda_mode "$CUDA_MODE"
         ;;
     all)

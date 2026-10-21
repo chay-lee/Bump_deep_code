@@ -241,14 +241,14 @@ def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, 
                     # TODO: Replace with mask-independent bump height evaluation.
                     # The following test-only code is not yet compatible.
                     # mask_b = mask[b].detach().cpu().numpy() if not is_sequence else mask[b, 0].detach().cpu().numpy()
-                    mask_b=None
+                    # mask_b=None
                     
-                    records, gt_h_list, pred_h_list = extract_bump_heights(
-                        base_name, pred_map_b, mask_b, heights_list[b]
-                    )
+                    # records, gt_h_list, pred_h_list = extract_bump_heights(
+                    #     base_name, pred_map_b, mask_b, heights_list[b]
+                    # )
 
-                    bump_records.extend(records)
-                    save_bump_viz_img(viz_dir, base_name, gt_map_b, pred_map_b, gt_h_list, pred_h_list, mask_b)
+                    # bump_records.extend(records)
+                    # save_bump_viz_img(viz_dir, base_name, gt_map_b, pred_map_b, gt_h_list, pred_h_list, mask_b)
 
                     pred_csv_path = os.path.join(height_map_pred, f"{base_name}.csv")
                     np.savetxt(pred_csv_path, pred_map_b, delimiter=",", fmt="%.6f")
