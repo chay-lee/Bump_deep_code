@@ -64,7 +64,7 @@ def run_test(model, args, scan_id, output_dir, checkpoint, pixel_evaluator, bump
 
     dataset = load_datasets(dataset_path, args, is_train=False)
     if not len(dataset): raise ValueError(f"No test volumes: {dataset.volume_root}")
-    loader = make_dataloaders(dataset, args.batch_size_test, False)
+    loader = make_dataloaders(dataset, args.batch_size_test, False, args.num_workers)
     os.makedirs(output_dir, exist_ok=True)
 
     _, eval_str = train_module.predict_model(
@@ -154,11 +154,7 @@ if __name__ == "__main__":
                 print(f"Starting from Epoch {start_epoch}\n")
 
         dataset = load_datasets(args.dataset_path, args, is_train=True)
-        train_loader, val_loader = make_dataloaders(
-            dataset,
-            args.batch_size,
-            is_train=True
-        )
+        train_loader, val_loader = make_dataloaders(dataset, args.batch_size, True, args.num_workers)
 
         log_mode = "a" if start_epoch > 0 else "w"
 

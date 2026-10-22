@@ -36,6 +36,7 @@ def parse_args():
     parser.add_argument("--batch_size_test", type=int, default=32, help="Batch size for evaluation")
     parser.add_argument("--model_mode", type=str, default="_final", help="Suffix of the checkpoint to load")
     parser.add_argument("--eval_workers", type=int, default=4, help="CPU workers for bump height evaluation")
+    parser.add_argument("--num_workers", type=int, default=4, help="DataLoader workers; 0 disables multiprocessing")
 
     # Runtime / hardware configuration
     parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"], help="Device used for training and evaluation")

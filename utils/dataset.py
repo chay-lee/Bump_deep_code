@@ -123,38 +123,17 @@ def load_datasets(root_dir, args, is_train):
         return testset
 
 
-def make_dataloaders(dataset, bn_size, is_train):
-    loader_kwargs = dict(
-        pin_memory=True,
-        num_workers=8,
-        persistent_workers=True,
-        prefetch_factor=2,
-        collate_fn=custom_collate_fn
-    )
+def make_dataloaders(dataset, bn_size, is_train, num_workers=4):
+    if num_workers < 0: raise ValueError("num_workers must be nonnegative")
+    options = dict(batch_size=bn_size, pin_memory=True, num_workers=num_workers, collate_fn=custom_collate_fn)
+    if num_workers > 0:
+        options.update(persistent_workers=True, prefetch_factor=2)
 
     if is_train:
-        train_loader = torch.utils.data.DataLoader(
-            dataset[0],
-            batch_size=bn_size,
-            shuffle=True,
-            **loader_kwargs
-        )
-        val_loader = torch.utils.data.DataLoader(
-            dataset[1],
-            batch_size=bn_size,
-            shuffle=False,
-            **loader_kwargs
-        )
+        train_loader = torch.utils.data.DataLoader(dataset[0], shuffle=True, **options)
+        val_loader = torch.utils.data.DataLoader(dataset[1], shuffle=False, **options)
         return train_loader, val_loader
-    else:
-        test_loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=bn_size,
-            shuffle=False,
-            **loader_kwargs
-        )
-        return test_loader
-
+    return torch.utils.data.DataLoader(dataset, shuffle=False, **options)
 
 def custom_collate_fn(batch):
     volumes, labels, file_names = zip(*batch)
