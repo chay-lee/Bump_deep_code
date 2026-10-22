@@ -2,14 +2,10 @@
 import datetime
 import os
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
-
+from tqdm import tqdm
 from utils.torch_utils import save_model, time_sync
-from evaluation.visualize import save_feature_map_npy, save_bump_viz_img
-from evaluation.metrics import extract_bump_heights
-
 
 # Set from main.py
 args = None
@@ -156,168 +152,71 @@ def train(train_loader, val_loader, model, txt_file, loss_fn, optimizer, MODEL_D
 
 
 # -----------------------------------------------------------------------------
-def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, height_dir):
+def predict_model(dataset_type, check_time, model, loss_fn, epoch, data_loader, height_dir,
+                  pixel_evaluator=None, bump_evaluator=None, scan_id=1):
+    is_test, log_loss = 'test' in dataset_type, not check_time
+    model.eval(); n_samples = 0; mean_loss = 0.0; times = np.zeros(3)
+    sum_losses = torch.zeros(4, device=args.device, dtype=torch.float64) if log_loss else None
 
-    return_str = f'\n\n{dataset_type}'
-    log_loss = not check_time
-    bump_records = []
-
-    model.eval()
-
-    if log_loss:
-        sum_losses_val = torch.zeros(4, device=args.device, dtype=torch.float64)
-        n_samples_val = 0
-
-    speed_result = torch.zeros(6, device=args.device) if check_time else None
-    mean_loss_val = 0
+    if is_test:
+        pred_dir, gt_dir = os.path.join(height_dir, 'map', 'pred'), os.path.join(height_dir, 'map', 'gt')
+        os.makedirs(pred_dir, exist_ok=True); os.makedirs(gt_dir, exist_ok=True)
 
     with torch.no_grad():
-        if 'test' in dataset_type:
-            height_map_gt = os.path.join(height_dir, "map", "gt")
-            height_map_pred = os.path.join(height_dir, "map", "pred")
-            feature_map_dir = os.path.join(height_dir, "feature_maps_npy")
-            viz_dir = os.path.join(height_dir, "result_img")
-
-            os.makedirs(height_map_gt, exist_ok=True)
-            os.makedirs(height_map_pred, exist_ok=True)
-            os.makedirs(feature_map_dir, exist_ok=True)
-            os.makedirs(viz_dir, exist_ok=True)
-
-        for i, data in enumerate(data_loader):
-
-            if 'test' in dataset_type:
-                inputs, interferos, heights_list, file_names = data
-            else:
-                inputs, interferos, file_names = data
-
-            if check_time:
-                t1 = time_sync()
-
+        batches = tqdm(data_loader, desc=dataset_type, unit='batch', disable=not is_test)
+        for inputs, interferos, file_names in batches:
+            t0 = time_sync() if check_time else 0
             inputs = inputs.to(args.device, non_blocking=True).float()
             interferos = interferos.to(args.device, non_blocking=True).float()
+            if check_time: times[0] += time_sync()-t0
 
-            if check_time:
-                speed_result[1] += time_sync() - t1
+            sequence = inputs.dim() == 6
+            B, S = inputs.shape[0], inputs.shape[1] if sequence else 1
+            H, W = interferos.shape[-2:]
+            x = inputs.flatten(0, 1) if sequence else inputs
+            gt_flat = interferos.flatten(0, 1) if sequence else interferos
 
-            is_sequence = (inputs.dim() == 6)
+            t0 = time_sync() if check_time else 0
+            pred_flat = model(x)[0]
+            if check_time: times[1] += time_sync()-t0
+            preds = pred_flat.reshape(B, S, 1, H, W) if sequence else pred_flat
+            n_samples += B
 
-            if is_sequence:
-                B, S, C, D, H, W = inputs.shape
-                H_out, W_out = interferos.shape[-2], interferos.shape[-1]
-                inputs_flat = inputs.view(B * S, C, D, H, W)
-                interferos_flat = interferos.view(B * S, 1, H_out, W_out)
-            else:
-                B = inputs.shape[0]
-                S = 1
-                inputs_flat = inputs
-                interferos_flat = interferos
+            if is_test:
+                if sequence: raise ValueError('Test loader must return one scan per sample.')
+                t0 = time_sync() if check_time else 0
+                pred_maps, gt_maps = preds[:, 0].cpu().numpy(), interferos[:, 0].cpu().numpy()
 
-            if check_time:
-                t2 = time_sync()
+                for stem, pred, gt in zip(file_names, pred_maps, gt_maps):
+                    if pixel_evaluator is not None: pixel_evaluator.update(scan_id, stem, pred, gt)
+                    np.savetxt(os.path.join(pred_dir, f'{stem}.csv'), pred, delimiter=',', fmt='%.6f')
+                    if np.isfinite(gt).all():
+                        np.savetxt(os.path.join(gt_dir, f'{stem}.csv'), gt, delimiter=',', fmt='%.6f')
 
-            outputs = model(inputs_flat)
-            preds_flat, x_cnn, x_argmax, x_softmax = outputs
-
-            if check_time:
-                speed_result[2] += time_sync() - t2
-                speed_result[0] += B
-
-            if is_sequence:
-                preds = preds_flat.view(B, S, 1, H_out, W_out)
-            else:
-                preds = preds_flat
-
-            if 'test' in dataset_type:
-                save_feature_map_npy(x_cnn, file_names[0], feature_map_dir, suffix="x_cnn")
-                save_feature_map_npy(x_argmax, file_names[0], feature_map_dir, suffix="x_argmax")
-                save_feature_map_npy(x_softmax, file_names[0], feature_map_dir, suffix="x_softmax")
-
-                for b in range(B):
-                    base_name = file_names[b]
-
-                    gt_map_b = interferos[b, 0].detach().cpu().numpy() if not is_sequence else interferos[b, 0, 0].detach().cpu().numpy()
-                    pred_map_b = preds[b, 0].detach().cpu().numpy() if not is_sequence else preds[b, 0, 0].detach().cpu().numpy()
-
-                    # TODO: Replace with mask-independent bump height evaluation.
-                    # The following test-only code is not yet compatible.
-                    # mask_b = mask[b].detach().cpu().numpy() if not is_sequence else mask[b, 0].detach().cpu().numpy()
-                    # mask_b=None
-                    
-                    # records, gt_h_list, pred_h_list = extract_bump_heights(
-                    #     base_name, pred_map_b, mask_b, heights_list[b]
-                    # )
-
-                    # bump_records.extend(records)
-                    # save_bump_viz_img(viz_dir, base_name, gt_map_b, pred_map_b, gt_h_list, pred_h_list, mask_b)
-
-                    pred_csv_path = os.path.join(height_map_pred, f"{base_name}.csv")
-                    np.savetxt(pred_csv_path, pred_map_b, delimiter=",", fmt="%.6f")
-
-                    gt_csv_path = os.path.join(height_map_gt, f"{base_name}.csv")
-                    np.savetxt(gt_csv_path, gt_map_b, delimiter=",", fmt="%.6f")
+                if bump_evaluator is not None: bump_evaluator.update_batch(scan_id, file_names, pred_maps)
+                if check_time: times[2] += time_sync()-t0
 
             if log_loss:
-                lambda_c = args.lambda_c
-                lambda_t = args.lambda_t
-                recon_weight = 1.0 - lambda_c - lambda_t
+                recon = loss_fn[0](pred_flat, gt_flat)
+                consis, tv = pred_flat.new_zeros(()), pred_flat.new_zeros(())
+                if args.lambda_c > 0 and sequence: consis = loss_fn[1](preds)
+                if args.lambda_t > 0: tv = loss_fn[2](pred_flat)
+                loss = (1-args.lambda_c-args.lambda_t)*recon + args.lambda_c*consis + args.lambda_t*tv
+                sum_losses += torch.stack([loss, recon, consis, tv]).to(torch.float64)*B
 
-                recon_loss = loss_fn[0](preds_flat, interferos_flat)
-                loss = recon_weight * recon_loss
+    text = f'\n\n{dataset_type}'
+    if log_loss and n_samples:
+        mean_loss, recon, consis, tv = (sum_losses/n_samples).tolist()
+        text += (f'\nEpoch:{epoch}, {dataset_type}_loss:{mean_loss:.4f}, '
+                 f'{dataset_type}_recon_loss:{recon:.4f}, {dataset_type}_consis_loss:{consis:.4f}, '
+                 f'{dataset_type}_tv_loss:{tv:.4f}')
 
-                consis_loss = torch.tensor(0.0, device=preds_flat.device)
-                tv_loss = torch.tensor(0.0, device=preds_flat.device)
-
-                if lambda_c > 0.0 and is_sequence:
-                    consis_loss = loss_fn[1](preds)
-                    loss = loss + (lambda_c * consis_loss)
-
-                if lambda_t > 0.0:
-                    tv_loss = loss_fn[2](preds_flat)
-                    loss = loss + (lambda_t * tv_loss)
-
-                sum_losses_val += torch.stack([
-                    loss.detach(),
-                    recon_loss.detach(),
-                    consis_loss.detach(),
-                    tv_loss.detach()
-                ]).to(torch.float64) * B
-
-                n_samples_val += B
-
-        mem_GB = int(torch.cuda.max_memory_allocated() / (1024**3))
-
-        if check_time:
-            speed_result[1:] *= 1000
-            detection_time_per_image = (speed_result[1] + speed_result[2] + speed_result[3]) / speed_result[0]
-
-            return_str += f'\n\nMax GPU memory for batch size {args.batch_size_test}: {mem_GB:.6f} GB'
-            return_str += (
-                f'\nTrained Epoch:{epoch:d}, '
-                f'Data num:{int(speed_result[0])}, '
-                f'pre-processing time:{speed_result[1]:0.8f} msec, '
-                f'inference time:{speed_result[2]:0.8f} msec, '
-                f'post-processing time:{speed_result[3]:0.8f} msec'
-            )
-
-        if log_loss and n_samples_val > 0:
-            mean_loss_val, mean_recon_loss_val, mean_consis_loss_val, mean_tv_loss_val = (
-                (sum_losses_val / n_samples_val).tolist()
-            )
-
-            return_str += (
-                f'\nEpoch:{epoch:d} '
-                f'{dataset_type}_loss:{mean_loss_val:.4f}, '
-                f'{dataset_type}_recon_loss:{mean_recon_loss_val:.4f}, '
-                f'{dataset_type}_consis_loss:{mean_consis_loss_val:.4f}, '
-                f'{dataset_type}_tv_loss:{mean_tv_loss_val:.4f}'
-            )
-
-        if len(bump_records) > 0:
-            df = pd.DataFrame(bump_records)
-            csv_save_path = os.path.join(height_dir, "bump_stats.csv")
-            df.to_csv(csv_save_path, index=False, float_format='%.4f')
-
-    return mean_loss_val, return_str
+    if check_time:
+        mem = torch.cuda.max_memory_allocated()/(1024**3) if args.device == 'cuda' else 0.0
+        text += (f'\nEpoch:{epoch}, patches:{n_samples}, peak_GPU_GiB:{mem:.3f}\n'
+                 f'Total transfer:{times[0]:.3f}s, forward:{times[1]:.3f}s, saving/evaluation:{times[2]:.3f}s\n'
+                 'Diagnostic timing only; excludes loader I/O and final aggregation; no warm-up exclusion.')
+    return mean_loss, text
 
 
 # -----------------------------------------------------------------------------

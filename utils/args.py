@@ -35,11 +35,12 @@ def parse_args():
     parser.add_argument("--repeat_test", type=str2bool, default=False, help="Evaluate scan-to-scan repeatability")
     parser.add_argument("--batch_size_test", type=int, default=32, help="Batch size for evaluation")
     parser.add_argument("--model_mode", type=str, default="_final", help="Suffix of the checkpoint to load")
+    parser.add_argument("--eval_workers", type=int, default=4, help="CPU workers for bump height evaluation")
 
     # Runtime / hardware configuration
     parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"], help="Device used for training and evaluation")
     parser.add_argument("--cuda_mode", type=str, default="single_gpu", choices=["single_gpu", "multi_gpu"], help="GPU execution mode")
-    parser.add_argument("--model_root", type=str, default="../Model", help="Directory for saving and loading checkpoints")
+    parser.add_argument("--model_root", type=str, default="./outputs", help="Directory for saving and loading checkpoints")
 
     # Training control
     parser.add_argument("--eval_epoch", type=int, default=5, help="Validation interval in epochs")

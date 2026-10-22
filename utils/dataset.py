@@ -3,7 +3,6 @@ import glob
 import random
 from PIL import Image
 import numpy as np
-import pandas as pd
 import torch
 
 
@@ -30,9 +29,6 @@ class CustomDataset(torch.utils.data.Dataset):
         self.volume_root = os.path.join(base_root, '3d_volume')
         self.label_root = os.path.join(base_root, 'interfero')
 
-        if self.is_test_mode:
-            self.height_root = os.path.join(base_root, 'height')
-
         all_files = glob.glob(os.path.join(self.volume_root, '*.npy'))
 
         if self.is_test_mode or self.is_recon_only:
@@ -57,6 +53,8 @@ class CustomDataset(torch.utils.data.Dataset):
 
     def _load_label(self, file_id):
         l_path = os.path.join(self.label_root, f"{file_id}.csv")
+        if self.is_test_mode and not os.path.isfile(l_path):
+            return torch.full((1, 232, 232), float('nan'))
         l_array = np.loadtxt(l_path, delimiter=',', dtype=np.float32)
 
         if l_array.shape != (232, 232):
@@ -82,10 +80,6 @@ class CustomDataset(torch.utils.data.Dataset):
 
             volume_tensor = self._load_volume(file_id)
             label_tensor = self._load_label(file_id)
-
-            if self.is_test_mode:
-                height_values = self._load_height(file_id)
-                return volume_tensor, label_tensor, height_values, file_id
 
             return volume_tensor, label_tensor, file_id
 
@@ -163,21 +157,8 @@ def make_dataloaders(dataset, bn_size, is_train):
 
 
 def custom_collate_fn(batch):
-    if len(batch[0]) == 4:
-        volumes, labels, heights, file_names = zip(*batch)
-
-        volumes_stacked = torch.stack(volumes, 0)
-        labels_stacked = torch.stack(labels, 0)
-
-        return volumes_stacked, labels_stacked, heights, file_names
-
-    else:
-        volumes, labels, file_names = zip(*batch)
-
-        volumes_stacked = torch.stack(volumes, 0)
-        labels_stacked = torch.stack(labels, 0)
-
-        return volumes_stacked, labels_stacked, file_names
+    volumes, labels, file_names = zip(*batch)
+    return torch.stack(volumes, 0), torch.stack(labels, 0), file_names
 
 
 def save_config(config, save_dir):

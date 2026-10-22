@@ -7,6 +7,9 @@ import torch.backends.cudnn as cudnn
 import torch.multiprocessing as mp
 import numpy as np
 import datetime
+from pathlib import Path
+from evaluation.pixel_metrics import PixelEvaluator
+from evaluation.bump_metrics import BumpEvaluator
 
 from utils.args import parse_args
 from utils.dataset import load_datasets, make_dataloaders
@@ -15,27 +18,24 @@ from utils.torch_utils import load_checkpoint
 from models.network import HeightEstimationNetwork
 
 import train as train_module
-from evaluation.metrics import calculate_and_save_mae_stats, calculate_and_save_bump_stats
-
-
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
+for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS", "BLIS_NUM_THREADS"):
+    os.environ[key] = "1"
 
 
 # -----------------------------------------------------------------------------
 # Utility Functions
 # -----------------------------------------------------------------------------
 def update_args_for_test(checkpoint, current_args):
-    """Preserve current run.sh arguments and add only missing checkpoint arguments."""
-    checkpoint_args = checkpoint.get("args", {})
+    from utils.args import str2bool
+    saved = checkpoint.get("args", {})
+    if not isinstance(saved, dict): saved = vars(saved)
 
-    if not isinstance(checkpoint_args, dict):
-        checkpoint_args = vars(checkpoint_args)
-
-    for key, value in checkpoint_args.items():
-        if not hasattr(current_args, key):
+    for key in ("coordconv", "use_2d_cnn", "depth", "y_range", "scan_params"):
+        if key in saved:
+            value = str2bool(saved[key]) if key in ("coordconv", "use_2d_cnn") else saved[key]
             setattr(current_args, key, value)
-
+        elif key in ("coordconv", "use_2d_cnn"):
+            raise ValueError(f"Checkpoint is missing architecture setting: {key}")
     return current_args
 
 
@@ -57,37 +57,24 @@ def setup_model_on_device(model, args):
     return model
 
 
-def run_test(model, args, scan_id, output_dir, checkpoint):
-    scan_name = f"repeat_test/{scan_id}" if getattr(args, "repeat_test", False) else "test"
-    print(f"\n[!] Running test for {scan_name}...")
-
-    # Set dataset path dynamically for repeated tests
-    if getattr(args, "repeat_test", False):
-        dataset_path = os.path.join(getattr(args, "dataset_path_base", args.dataset_path), scan_name)
-    else:
-        dataset_path = args.dataset_path
+def run_test(model, args, scan_id, output_dir, checkpoint, pixel_evaluator, bump_evaluator):
+    scan_name = f"repeat_test/{scan_id}" if args.repeat_test else "test"
+    dataset_path = os.path.join(args.dataset_path, scan_name) if args.repeat_test else args.dataset_path
+    print(f"\nRunning test: {scan_name}")
 
     dataset = load_datasets(dataset_path, args, is_train=False)
-    test_loader = make_dataloaders(dataset, args.batch_size_test, False)
-
+    if not len(dataset): raise ValueError(f"No test volumes: {dataset.volume_root}")
+    loader = make_dataloaders(dataset, args.batch_size_test, False)
     os.makedirs(output_dir, exist_ok=True)
 
-    with open(os.path.join(output_dir, "test_result.txt"), "a") as txt_file:
-        _, eval_str = train_module.predict_model(
-            dataset_type=scan_name,
-            check_time=True,
-            model=model,
-            loss_fn=checkpoint["loss"],
-            epoch=checkpoint["epoch"],
-            data_loader=test_loader,
-            height_dir=output_dir
-        )
-
-        test_result_str = f"\n\nmodel{args.model_mode} evaluation on {scan_name}"
-        test_result_str += eval_str
-        txt_file.write(test_result_str)
-
-        print(f"Test for {scan_name} finished and results saved.")
+    _, eval_str = train_module.predict_model(
+        dataset_type=scan_name, check_time=True, model=model, loss_fn=None,
+        epoch=checkpoint["epoch"], data_loader=loader, height_dir=str(output_dir),
+        pixel_evaluator=pixel_evaluator, bump_evaluator=bump_evaluator, scan_id=scan_id
+    )
+    with open(os.path.join(output_dir, "test_result.txt"), "w", encoding="utf-8") as f:
+        f.write(f"model{args.model_mode} / {scan_name}\n{eval_str}\n")
+    print(f"Saved: {output_dir}")
 
 
 # -----------------------------------------------------------------------------
@@ -200,48 +187,37 @@ if __name__ == "__main__":
     # ==========================================
     else:
         checkpoint, _ = load_checkpoint(MODEL_DIR, args.model_mode)
-
-        # Current run.sh arguments have priority.
-        # Checkpoint arguments are used only for settings missing from current args.
         args = update_args_for_test(checkpoint, args)
         train_module.args = args
 
         model = HeightEstimationNetwork(args)
-        model.load_state_dict(checkpoint["model"])
+        state = checkpoint["model"]
+        if state and all(k.startswith("module.") for k in state):
+            state = {k[7:]: v for k, v in state.items()}
+        model.load_state_dict(state)
         model = setup_model_on_device(model, args)
         model.eval()
 
-        results_root = os.path.join(MODEL_DIR, f"model{args.model_mode}")
+        scans = tuple(range(1, 11)) if args.repeat_test else (1,)
+        split = "repeat_test" if args.repeat_test else "test"
+        result_dir = Path(MODEL_DIR) / f"model{args.model_mode}" / split
+        gt_root = Path(args.dataset_path) / split
+        reference_dir = gt_root / "1" / "interfero" if args.repeat_test else gt_root / "interfero"
 
-        if getattr(args, "repeat_test", False):
-            args.dataset_path_base = args.dataset_path
+        pixel = PixelEvaluator(scans, reference_dir, result_dir)
+        with BumpEvaluator(scans, gt_root, result_dir, args.eval_workers, args.repeat_test) as bump:
+            for scan_id in scans:
+                output_dir = result_dir / str(scan_id) if args.repeat_test else result_dir
+                run_test(model, args, scan_id, output_dir, checkpoint, pixel, bump)
+            metrics = {**pixel.finish(), **bump.finish()}
 
-            for scan_id in range(1, 11):
-                output_dir = os.path.join(
-                    results_root,
-                    "repeat_test",
-                    str(scan_id)
-                )
-
-                run_test(
-                    model,
-                    args,
-                    str(scan_id),
-                    output_dir,
-                    checkpoint
-                )
-        else:
-            output_dir = os.path.join(results_root, "test")
-            run_test(model, args, "test", output_dir, checkpoint)
-
-        calculate_and_save_mae_stats(
-            base_dir=results_root,
-            mae_save_dir=results_root
-        )
-
-        # calculate_and_save_bump_stats(
-        #     base_dir=results_root,
-        #     save_dir=results_root
-        # )
-
-        print(f"\nTest finished for: {args.model_feature}")
+        lines = [
+            "TEST METRICS",
+            f"Model: {args.model_feature} | Checkpoint: {args.model_mode}",
+            "Unit: 10^-2 um | STD: ddof=0",
+            "Cohorts and exclusions: pixel_metrics.txt / height_summary.txt",
+        ]
+        lines += [f"{key}: {100*metrics[key]:.6f}" for key in ("E_p", "sigma_p", "E_b", "sigma_b", "sigma_s")]
+        (result_dir / "test_summary.txt").write_text("\n".join(lines)+"\n", encoding="utf-8")
+        print("\n".join(lines))
+        print(f"\nSaved: {result_dir / 'test_summary.txt'}")
